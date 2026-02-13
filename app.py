@@ -1,0 +1,99 @@
+from flask import Flask, jsonify, request, send_from_directory
+from urllib.parse import urlparse, urlunparse
+from modules.port_scanner import scan_top_ports
+from modules.subdomain_scanner import scan_subdomains
+from modules.directory_scanner import scan_directories
+from modules.header_checker import check_headers
+from modules.cors_checker import check_cors
+from modules.xss_tester import test_basic_xss
+from report_generator import generate_report
+import time
+
+app = Flask(__name__, static_folder="web", static_url_path="")
+
+
+@app.get("/")
+def index():
+    return send_from_directory("web", "index.html")
+
+
+@app.post("/api/scan")
+def api_scan():
+    payload = request.get_json(silent=True) or {}
+    target = payload.get("target", "").strip()
+    if not target:
+        return jsonify({"error": "Target is required"}), 400
+
+    parsed = urlparse(target if "://" in target else f"http://{target}")
+    host = parsed.hostname or ""
+    scheme = parsed.scheme or "http"
+    port = f":{parsed.port}" if parsed.port else ""
+    base_url = urlunparse((scheme, f"{host}{port}", "", "", "", ""))
+
+    # Core scan modules
+    open_ports = []
+    subdomains = []
+    discovered_paths = []
+    missing_headers = []
+    cors_issues = []
+    xss_reflected = False
+    test_url = target
+
+    # Full scan for all targets (localhost and 127.0.0.1 included)
+    # Normalize localhost for port scanning reliability
+    port_target = "127.0.0.1" if host in ("localhost", "127.0.0.1", "::1") else host
+    open_ports = scan_top_ports(port_target)
+
+    # Subdomains for localhost are not meaningful; skip them
+    subdomains = [] if host in ("localhost", "127.0.0.1", "::1") else scan_subdomains(base_url)
+
+    discovered_paths = scan_directories(base_url, "wordlist.txt")
+    missing_headers = check_headers(base_url)
+    cors_issues = check_cors(base_url)
+    xss_reflected, test_url = test_basic_xss(base_url)
+
+    vulnerabilities = []
+    if missing_headers:
+        vulnerabilities.append("Missing Security Headers: " + ", ".join(missing_headers))
+    if cors_issues:
+        vulnerabilities.extend(cors_issues)
+    if xss_reflected:
+        vulnerabilities.append(f"Potential XSS reflection at {test_url}")
+
+    # Generate a fresh report on every scan
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    report_name = f"reconx_report_{timestamp}.pdf"
+    generate_report(
+        output_path=report_name,
+        target=target,
+        open_ports=open_ports,
+        vulnerabilities=vulnerabilities,
+        discovered_paths=discovered_paths,
+        subdomains=subdomains,
+        possible_attacks=[],
+    )
+
+    return jsonify(
+        {
+            "target": target,
+            "open_ports": open_ports,
+            "subdomains": subdomains,
+            "discovered_paths": discovered_paths,
+            "vulnerabilities": vulnerabilities,
+            "report": f"/reports/{report_name}",
+        }
+    )
+
+
+@app.get("/reports/<path:filename>")
+def report_files(filename):
+    return send_from_directory(".", filename)
+
+
+@app.get("/<path:filename>")
+def static_files(filename):
+    return send_from_directory("web", filename)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

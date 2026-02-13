@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReconX Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Space+Grotesk:wght@400;500;600&family=Rajdhani:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <video class="bg-video" autoplay muted loop playsinline>
+      <source src="assets/meri.mp4" type="video/mp4" />
+    </video>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+    <div class="bg-live"></div>
+
+    <header class="topbar">
+      <div class="logo">
+        <span class="logo-mark">RECON</span><span class="logo-x">X</span>
+      </div>
+      <div class="tagline">Automated Reconnaissance &amp; Vulnerability Scanner</div>
+      <div class="crazy-text">CYBER-TRIAGE / SIGNAL ACTIVE / VECTOR GRID ONLINE</div>
+      <div class="credit-line">Developed by Akshay Bajaj and Deepanshi Malhotra</div>
+    </header>
+
+    <main class="container">
+      <section class="instructions">
+        <details>
+          <summary>How to Use This Site</summary>
+          <div class="instructions-body">
+            <ol class="instructions-list">
+              <li>Enter a target URL or domain in the Target URL box.</li>
+              <li>Click Start Scan to begin the scan flow.</li>
+              <li>Click Tech Stack Detected to open the target home page.</li>
+              <li>Click Login Page Detected to open the target login page.</li>
+              <li>Use Export Report to open the latest report PDF.</li>
+            </ol>
+          </div>
+        </details>
+      </section>
+
+      <section class="scan-bar">
+        <div class="scan-shell">
+          <label class="scan-label" for="target">Target URL</label>
+          <input id="target" class="scan-input" placeholder="Type here..." />
+        </div>
+        <button class="btn-primary" id="startScan">Start Scan</button>
+      </section>
+
+      <section class="cards">
+        <article class="card card-red">
+          <header class="card-title">
+            <span class="card-icon">◉</span>
+            <h3>Open Ports</h3>
+          </header>
+          <div class="card-meta" id="portsMeta">To Be Scanned</div>
+          <ul class="list" id="portsList">
+            <li>Top 1000 TCP ports</li>
+            <li>Open port discovery</li>
+          </ul>
+        </article>
+
+        <article class="card card-blue">
+          <header class="card-title">
+            <span class="card-icon">◎</span>
+            <h3>Subdomains</h3>
+          </header>
+          <div class="card-meta" id="subdomainsMeta">To Be Scanned</div>
+          <ul class="list" id="subdomainsList">
+            <li>Common subdomains</li>
+            <li>HTTP/HTTPS validation</li>
+          </ul>
+        </article>
+
+        <article class="card card-green">
+          <header class="card-title">
+            <span class="card-icon">⬢</span>
+            <h3>Discovered Paths</h3>
+          </header>
+          <div class="card-meta" id="pathsMeta">To Be Scanned</div>
+          <ul class="list" id="pathsList">
+            <li>Directories from wordlist</li>
+            <li>Valid path discovery</li>
+          </ul>
+        </article>
+
+        <article class="card card-orange">
+          <header class="card-title">
+            <span class="card-icon">✦</span>
+            <h3>Vulnerabilities</h3>
+          </header>
+          <div class="card-meta" id="vulnsMeta">To Be Scanned</div>
+          <ul class="list" id="vulnsList">
+            <li>Missing security headers</li>
+            <li>CORS configuration</li>
+            <li>Basic XSS reflection</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="status-row">
+        <button class="status-pill link" id="techStackLink">Tech Stack Detected: Apache | PHP</button>
+        <button class="status-pill good link" id="loginLink">Login Page Detected</button>
+      </section>
+
+      <section class="export-row">
+        <div class="export-left">
+          <span class="label">Scan Summary</span>
+          <select class="select" id="reportSelect">
+            <option value="/reports/reconx_report.pdf">reconx_report.pdf</option>
+            <option value="/reports/reconx_report_2.pdf">reconx_report_2.pdf</option>
+          </select>
+        </div>
+        <button class="btn-secondary" id="exportBtn">Export Report</button>
+      </section>
+    </main>
+    <footer class="footer">© 2026 ReconX. All rights reserved.</footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

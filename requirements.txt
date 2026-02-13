@@ -1,0 +1,7 @@
+requests
+python-nmap
+reportlab
+colorama
+beautifulsoup4
+rich
+flask
