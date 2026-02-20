@@ -8,13 +8,29 @@ from modules.cors_checker import check_cors
 from modules.xss_tester import test_basic_xss
 from report_generator import generate_report
 import time
+from pathlib import Path
 
-app = Flask(__name__, static_folder="web", static_url_path="")
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+LEGACY_WEB = BASE_DIR / "web"
+STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else LEGACY_WEB
+
+app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
+
+
+@app.after_request
+def disable_cache(response):
+    if request.path == "/" or request.path.endswith(".html"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/")
 def index():
-    return send_from_directory("web", "index.html")
+    return send_from_directory(str(STATIC_DIR), "index.html")
 
 
 @app.post("/api/scan")
@@ -90,9 +106,18 @@ def report_files(filename):
     return send_from_directory(".", filename)
 
 
+@app.get("/assets/<path:filename>")
+def assets_files(filename):
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.exists():
+        return send_from_directory(str(assets_dir), filename)
+    # Legacy fallback when serving from /web
+    return send_from_directory(str(LEGACY_WEB / "assets"), filename)
+
+
 @app.get("/<path:filename>")
 def static_files(filename):
-    return send_from_directory("web", filename)
+    return send_from_directory(str(STATIC_DIR), filename)
 
 
 if __name__ == "__main__":

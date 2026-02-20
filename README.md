@@ -26,10 +26,33 @@ python reconx.py example.com
 ```
 
 ## Run Web UI
+1. Build React frontend:
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+2. Start Flask:
 ```bash
 python app.py
 ```
 Then open `http://127.0.0.1:5000` in your browser.
+
+### Frontend Dev Mode (optional)
+Terminal 1:
+```bash
+python app.py
+```
+
+Terminal 2:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open the URL shown by Vite (usually `http://127.0.0.1:5173`).
 
 Optional arguments:
 - `--wordlist path/to/wordlist.txt`
