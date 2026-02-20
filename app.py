@@ -12,8 +12,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
-LEGACY_WEB = BASE_DIR / "web"
-STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else LEGACY_WEB
+STATIC_DIR = FRONTEND_DIST
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
@@ -30,6 +29,15 @@ def disable_cache(response):
 
 @app.get("/")
 def index():
+    if not FRONTEND_DIST.exists():
+        return (
+            jsonify(
+                {
+                    "error": "React build not found. Run: cd frontend && npm install && npm run build"
+                }
+            ),
+            500,
+        )
     return send_from_directory(str(STATIC_DIR), "index.html")
 
 
@@ -108,11 +116,7 @@ def report_files(filename):
 
 @app.get("/assets/<path:filename>")
 def assets_files(filename):
-    assets_dir = FRONTEND_DIST / "assets"
-    if assets_dir.exists():
-        return send_from_directory(str(assets_dir), filename)
-    # Legacy fallback when serving from /web
-    return send_from_directory(str(LEGACY_WEB / "assets"), filename)
+    return send_from_directory(str(FRONTEND_DIST / "assets"), filename)
 
 
 @app.get("/<path:filename>")
