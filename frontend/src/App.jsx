@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
 
 function normalizeTarget(raw) {
   const value = raw.trim();
@@ -49,10 +50,10 @@ function App() {
   ]);
 
   const [reports, setReports] = useState([
-    { value: "/reports/reconx_report.pdf", label: "reconx_report.pdf" },
-    { value: "/reports/reconx_report_2.pdf", label: "reconx_report_2.pdf" },
+    { value: `${API_BASE}/reports/reconx_report.pdf`, label: "reconx_report.pdf" },
+    { value: `${API_BASE}/reports/reconx_report_2.pdf`, label: "reconx_report_2.pdf" },
   ]);
-  const [selectedReport, setSelectedReport] = useState("/reports/reconx_report.pdf");
+  const [selectedReport, setSelectedReport] = useState(`${API_BASE}/reports/reconx_report.pdf`);
 
   function setAllMeta(meta) {
     setPortsMeta(meta);
@@ -80,7 +81,7 @@ function App() {
     setAllLists("Queued: awaiting results...");
 
     try {
-      const res = await fetch("/api/scan", {
+      const res = await fetch(`${API_BASE}/api/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: normalizeTarget(target) }),
@@ -103,12 +104,15 @@ function App() {
       setVulns(data.vulnerabilities?.length ? data.vulnerabilities : ["No vulnerabilities detected."]);
 
       if (data.report) {
-        const label = data.report.split("/").pop();
+        const reportUrl = /^https?:\/\//i.test(data.report)
+          ? data.report
+          : `${API_BASE}${data.report}`;
+        const label = reportUrl.split("/").pop();
         setReports((prev) => {
-          const filtered = prev.filter((r) => r.value !== data.report);
-          return [{ value: data.report, label }, ...filtered];
+          const filtered = prev.filter((r) => r.value !== reportUrl);
+          return [{ value: reportUrl, label }, ...filtered];
         });
-        setSelectedReport(data.report);
+        setSelectedReport(reportUrl);
       }
     } catch (_error) {
       setAllMeta("Scan Failed");

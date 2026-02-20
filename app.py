@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 from urllib.parse import urlparse, urlunparse
 from modules.port_scanner import scan_top_ports
 from modules.subdomain_scanner import scan_subdomains
@@ -8,6 +9,7 @@ from modules.cors_checker import check_cors
 from modules.xss_tester import test_basic_xss
 from report_generator import generate_report
 import time
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,6 +19,9 @@ STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else LEGACY_WEB
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
+allowed_origins = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+origins = [o.strip() for o in allowed_origins.split(",")] if allowed_origins != "*" else "*"
+CORS(app, resources={r"/api/*": {"origins": origins}, r"/reports/*": {"origins": origins}})
 
 
 @app.after_request
@@ -96,7 +101,7 @@ def api_scan():
             "subdomains": subdomains,
             "discovered_paths": discovered_paths,
             "vulnerabilities": vulnerabilities,
-            "report": f"/reports/{report_name}",
+            "report": f"{request.host_url.rstrip('/')}/reports/{report_name}",
         }
     )
 

@@ -5,3 +5,5 @@ colorama
 beautifulsoup4
 rich
 flask
+flask-cors
+gunicorn
