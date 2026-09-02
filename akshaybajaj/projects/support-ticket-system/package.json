@@ -1,0 +1,13 @@
+{
+  "name": "support-ticket-system",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "echo \"Run client and server separately\""
+  }
+}
+
