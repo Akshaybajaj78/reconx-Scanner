@@ -13,6 +13,9 @@ def generate_report(
     possible_attacks: list,
     tech_stack: list = None,
     takeovers: list = None,
+    js_endpoints: list = None,
+    js_secrets: list = None,
+    js_source_maps: list = None,
 ):
     """
     Generate a professional PDF report.
@@ -21,6 +24,12 @@ def generate_report(
         tech_stack = []
     if takeovers is None:
         takeovers = []
+    if js_endpoints is None:
+        js_endpoints = []
+    if js_secrets is None:
+        js_secrets = []
+    if js_source_maps is None:
+        js_source_maps = []
 
     doc = SimpleDocTemplate(output_path, pagesize=LETTER)
     styles = getSampleStyleSheet()
@@ -33,7 +42,7 @@ def generate_report(
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Summary", styles["Heading2"]))
-    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)} | Technologies: {len(tech_stack)} | Takeovers: {len(takeovers)}"
+    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)} | Technologies: {len(tech_stack)} | Takeovers: {len(takeovers)} | JS Endpoints: {len(js_endpoints)} | JS Secrets: {len(js_secrets)}"
     story.append(Paragraph(summary_text, styles["Normal"]))
     story.append(Spacer(1, 12))
 
@@ -55,6 +64,18 @@ def generate_report(
 
     story.append(Paragraph("Subdomain Takeovers", styles["Heading2"]))
     story.append(_list_table(takeovers))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("JavaScript Endpoints", styles["Heading2"]))
+    story.append(_list_table(js_endpoints))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("JavaScript Secrets", styles["Heading2"]))
+    story.append(_list_table(js_secrets))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("JavaScript Source Maps", styles["Heading2"]))
+    story.append(_list_table(js_source_maps))
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Vulnerabilities", styles["Heading2"]))

@@ -16,6 +16,7 @@ from modules.xss_tester import test_basic_xss
 from modules.vulnerability_scanner import scan_vulnerabilities
 from modules.tech_stack_detector import detect_tech_stack
 from modules.takeover_scanner import scan_takeovers
+from modules.js_endpoint_scanner import extract_js_endpoints
 from report_generator import generate_report
 
 
@@ -154,6 +155,14 @@ def run_scan(
     tech_stack = tech_result["technologies"]
     tech_by_category = tech_result["by_category"]
     tech_summary = tech_result["summary"]
+
+    with console.status("Extracting JS endpoints & secrets..."):
+        js_result = extract_js_endpoints(base_url, timeout=8.0)
+    js_scripts = js_result["scripts"]
+    js_endpoints = js_result["endpoints"]
+    js_secrets = js_result["secrets"]
+    js_source_maps = js_result["source_maps"]
+    js_summary = js_result["summary"]
 
     # Passive/indicative list only (no active exploitation)
     possible_attacks = [
@@ -343,6 +352,39 @@ def run_scan(
         f"({tech_summary.get('categories', 0)} categories)"
     )
 
+    # JS Endpoints table
+    js_table = Table(title="JavaScript Endpoints & Secrets")
+    js_table.add_column("Type", style="cyan")
+    js_table.add_column("Value", style="green")
+    js_table.add_column("Source", style="magenta")
+    js_table.add_column("Description", style="white")
+    if js_endpoints:
+        for ep in js_endpoints[:30]:
+            js_table.add_row(
+                ep["type"],
+                ep["value"][:60],
+                ep.get("source", "—")[:40],
+                ep.get("description", "—")[:40],
+            )
+    if js_secrets:
+        for sec in js_secrets[:20]:
+            js_table.add_row(
+                f"[SECRET] {sec['type']}",
+                sec["value"][:60],
+                sec.get("source", "—")[:40],
+                sec.get("description", "—")[:40],
+            )
+    if not js_endpoints and not js_secrets:
+        js_table.add_row("—", "—", "—", "—")
+    console.print(js_table)
+
+    console.print(
+        f"[bold blue]JS summary:[/bold blue] {js_summary.get('total_endpoints', 0)} endpoints, "
+        f"{js_summary.get('total_secrets', 0)} secrets, "
+        f"{js_summary.get('total_source_maps', 0)} source maps "
+        f"({js_summary.get('total_scripts', 0)} scripts)"
+    )
+
     _print_table("Potential Attack Areas (Not Tested)", possible_attacks)
 
     # Build human-readable path lines for the PDF report.
@@ -367,6 +409,18 @@ def run_scan(
         f"[{t.get('service','')}] {t.get('subdomain','')} -> {t.get('cname_target','')} (evidence: {t.get('evidence','')})"
         for t in takeovers
     ]
+    js_endpoint_report_lines = [
+        f"[{ep['type']}] {ep['value']} ({ep.get('source','')})"
+        for ep in js_endpoints
+    ]
+    js_secret_report_lines = [
+        f"[{sec['type']}] {sec['value']} ({sec.get('source','')})"
+        for sec in js_secrets
+    ]
+    js_sourcemap_report_lines = [
+        f"[SOURCE-MAP] {sm['url']} (from {sm['source']})"
+        for sm in js_source_maps
+    ]
 
     generate_report(
         output_path=output_pdf,
@@ -377,6 +431,9 @@ def run_scan(
         subdomains=subdomain_report_lines,
         tech_stack=tech_report_lines,
         takeovers=takeover_report_lines,
+        js_endpoints=js_endpoint_report_lines,
+        js_secrets=js_secret_report_lines,
+        js_source_maps=js_sourcemap_report_lines,
         possible_attacks=possible_attacks,
     )
 

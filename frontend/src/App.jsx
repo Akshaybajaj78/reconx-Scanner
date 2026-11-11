@@ -83,6 +83,11 @@ function App() {
   const [techSummary, setTechSummary] = useState(null);
   const [takeovers, setTakeovers] = useState([]);
   const [takeoverSummary, setTakeoverSummary] = useState(null);
+  const [jsScripts, setJsScripts] = useState([]);
+  const [jsEndpoints, setJsEndpoints] = useState([]);
+  const [jsSecrets, setJsSecrets] = useState([]);
+  const [jsSourceMaps, setJsSourceMaps] = useState([]);
+  const [jsSummary, setJsSummary] = useState(null);
 
   function setAllMeta(meta) {
     setPortsMeta(meta);
@@ -120,6 +125,11 @@ function App() {
     setTechSummary(null);
     setTakeovers([]);
     setTakeoverSummary(null);
+    setJsScripts([]);
+    setJsEndpoints([]);
+    setJsSecrets([]);
+    setJsSourceMaps([]);
+    setJsSummary(null);
 
     try {
       const body = {
@@ -256,6 +266,21 @@ function App() {
       } else {
         setTakeovers([]);
         setTakeoverSummary(null);
+      }
+
+      // JavaScript endpoints & secrets — render rich findings.
+      if (data.js_endpoints || data.js_secrets || data.js_source_maps) {
+        setJsScripts(data.js_scripts || []);
+        setJsEndpoints(data.js_endpoints || []);
+        setJsSecrets(data.js_secrets || []);
+        setJsSourceMaps(data.js_source_maps || []);
+        setJsSummary(data.js_summary || null);
+      } else {
+        setJsScripts([]);
+        setJsEndpoints([]);
+        setJsSecrets([]);
+        setJsSourceMaps([]);
+        setJsSummary(null);
       }
 
       if (data.report) {
@@ -535,6 +560,19 @@ function App() {
           </section>
         )}
 
+        {/* JavaScript summary strip */}
+        {jsSummary && (
+          <section className="summary-strip">
+            <span className="summary-label">JS Endpoints</span>
+            <span className="summary-value">
+              {jsSummary.total_endpoints} endpoints • {jsSummary.total_secrets} secrets
+            </span>
+            <span className="summary-type">
+              {jsSummary.total_scripts} scripts • {jsSummary.total_source_maps} source maps
+            </span>
+          </section>
+        )}
+
         {/* API documentation endpoints */}
         {apiDocs.length > 0 && (
           <section className="api-docs-section">
@@ -680,6 +718,64 @@ function App() {
                   )}
                 </li>
               )) : [<li key="takeover-none">No takeovers detected.</li>]}
+            </ul>
+          </article>
+
+          <article className="card card-blue">
+            <header className="card-title">
+              <span className="card-icon">🌐</span>
+              <h3>JavaScript Endpoints</h3>
+            </header>
+            <div className="card-meta" id="jsEndpointsMeta">
+              {jsSummary ? `${jsSummary.total_endpoints} endpoints found` : "To Be Scanned"}
+            </div>
+            <ul className="list" id="jsEndpointsList">
+              {jsEndpoints.length > 0 ? jsEndpoints.map((ep, idx) => (
+                <li key={`js-endpoint-${idx}`}>
+                  <span className="js-type-badge">{ep.type}</span>
+                  <strong>{ep.value}</strong>
+                  <span className="js-source">{ep.source}</span>
+                  <p className="js-desc">{ep.description}</p>
+                </li>
+              )) : [<li key="js-endpoint-none">No endpoints detected.</li>]}
+            </ul>
+          </article>
+
+          <article className="card card-red">
+            <header className="card-title">
+              <span className="card-icon">🔑</span>
+              <h3>JavaScript Secrets</h3>
+            </header>
+            <div className="card-meta" id="jsSecretsMeta">
+              {jsSummary ? `${jsSummary.total_secrets} secrets found` : "To Be Scanned"}
+            </div>
+            <ul className="list" id="jsSecretsList">
+              {jsSecrets.length > 0 ? jsSecrets.map((sec, idx) => (
+                <li key={`js-secret-${idx}`}>
+                  <span className="js-type-badge">{sec.type}</span>
+                  <strong>{sec.value}</strong>
+                  <span className="js-source">{sec.source}</span>
+                  <p className="js-desc">{sec.description}</p>
+                </li>
+              )) : [<li key="js-secret-none">No secrets detected.</li>]}
+            </ul>
+          </article>
+
+          <article className="card card-orange">
+            <header className="card-title">
+              <span className="card-icon">🗺️</span>
+              <h3>JavaScript Source Maps</h3>
+            </header>
+            <div className="card-meta" id="jsSourceMapsMeta">
+              {jsSummary ? `${jsSummary.total_source_maps} source maps` : "To Be Scanned"}
+            </div>
+            <ul className="list" id="jsSourceMapsList">
+              {jsSourceMaps.length > 0 ? jsSourceMaps.map((sm, idx) => (
+                <li key={`js-sourcemap-${idx}`}>
+                  <strong>{sm.url}</strong>
+                  <span className="js-source">{sm.source}</span>
+                </li>
+              )) : [<li key="js-sourcemap-none">No source maps detected.</li>]}
             </ul>
           </article>
         </section>

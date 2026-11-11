@@ -9,6 +9,7 @@ from modules.xss_tester import test_basic_xss
 from modules.vulnerability_scanner import scan_vulnerabilities
 from modules.tech_stack_detector import detect_tech_stack
 from modules.takeover_scanner import scan_takeovers
+from modules.js_endpoint_scanner import extract_js_endpoints
 from report_generator import generate_report
 import time
 from pathlib import Path
@@ -163,6 +164,28 @@ def api_scan():
         for t in tech_stack
     ]
 
+    # --- JavaScript endpoint & secret extraction ------------------------ #
+    js_result = extract_js_endpoints(base_url, timeout=8.0)
+    js_scripts = js_result["scripts"]
+    js_endpoints = js_result["endpoints"]
+    js_secrets = js_result["secrets"]
+    js_source_maps = js_result["source_maps"]
+    js_summary = js_result["summary"]
+
+    # Build human-readable JS lines for the PDF report.
+    js_endpoint_report_lines = [
+        f"[{ep['type']}] {ep['value']} ({ep['source']})"
+        for ep in js_endpoints
+    ]
+    js_secret_report_lines = [
+        f"[{sec['type']}] {sec['value']} ({sec['source']})"
+        for sec in js_secrets
+    ]
+    js_sourcemap_report_lines = [
+        f"[SOURCE-MAP] {sm['url']} (from {sm['source']})"
+        for sm in js_source_maps
+    ]
+
     # Generate a fresh report on every scan
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     report_name = f"reconx_report_{timestamp}.pdf"
@@ -183,6 +206,14 @@ def api_scan():
         f"[{v.get('severity','info').upper()}] {v.get('title','')} — {v.get('description','')} [{v.get('category','General')}]"
         for v in vulnerabilities
     ]
+    tech_report_lines = [
+        f"{t.get('name','')} ({t.get('category','')}) — {t.get('description','')}"
+        for t in tech_stack
+    ]
+    takeover_report_lines = [
+        f"[{t.get('service','')}] {t.get('subdomain','')} -> {t.get('cname_target','')} (evidence: {t.get('evidence','')})"
+        for t in takeovers
+    ]
     generate_report(
         output_path=report_name,
         target=target,
@@ -191,6 +222,10 @@ def api_scan():
         discovered_paths=path_report_lines,
         subdomains=subdomain_report_lines,
         tech_stack=tech_report_lines,
+        takeovers=takeover_report_lines,
+        js_endpoints=js_endpoint_report_lines,
+        js_secrets=js_secret_report_lines,
+        js_source_maps=js_sourcemap_report_lines,
         possible_attacks=[],
     )
 
@@ -212,6 +247,13 @@ def api_scan():
             "tech_stack": tech_stack,
             "tech_by_category": tech_by_category,
             "tech_summary": tech_summary,
+            "js_scripts": js_scripts,
+            "js_endpoints": js_endpoints,
+            "js_secrets": js_secrets,
+            "js_source_maps": js_source_maps,
+            "js_summary": js_summary,
+            "takeovers": takeovers,
+            "takeover_summary": takeover_summary,
             "cors_issues": cors_issues,
             "missing_headers": missing_headers,
             "xss_reflected": xss_reflected,
@@ -236,6 +278,34 @@ def api_takeover():
         {
             "targets_scanned": result["targets_scanned"],
             "takeovers": result["takeovers"],
+            "summary": result["summary"],
+        }
+    )
+
+
+@app.post("/api/js-endpoints")
+def api_js_endpoints():
+    """Extract JavaScript endpoints and secrets from a target."""
+    payload = request.get_json(silent=True) or {}
+    target = payload.get("target", "").strip()
+    if not target:
+        return jsonify({"error": "Target is required"}), 400
+
+    parsed = urlparse(target if "://" in target else f"http://{target}")
+    base_url = f"{parsed.scheme or 'http'}://{parsed.hostname}"
+    port = f":{parsed.port}" if parsed.port else ""
+    base_url = f"{base_url}{port}"
+
+    timeout = float(payload.get("timeout", 8.0))
+    result = extract_js_endpoints(base_url, timeout=timeout)
+
+    return jsonify(
+        {
+            "target": result["target"],
+            "scripts": result["scripts"],
+            "endpoints": result["endpoints"],
+            "secrets": result["secrets"],
+            "source_maps": result["source_maps"],
             "summary": result["summary"],
         }
     )
