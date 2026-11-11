@@ -15,6 +15,7 @@ from modules.cors_checker import check_cors
 from modules.xss_tester import test_basic_xss
 from modules.vulnerability_scanner import scan_vulnerabilities
 from modules.tech_stack_detector import detect_tech_stack
+from modules.takeover_scanner import scan_takeovers
 from report_generator import generate_report
 
 
@@ -104,6 +105,15 @@ def run_scan(
         )
     subdomains = subdomain_result["subdomains"]
     subdomain_summary = subdomain_result["summary"]
+
+    # --- Takeover scanning on discovered subdomains --------------------- #
+    with console.status("Checking for subdomain takeovers..."):
+        takeover_result = scan_takeovers(
+            [s["subdomain"] for s in subdomains] if subdomains else [],
+            timeout=8.0,
+        )
+    takeovers = takeover_result["takeovers"]
+    takeover_summary = takeover_result["summary"]
 
     base_url = _normalize_url(target)
 
@@ -287,6 +297,29 @@ def run_scan(
         f"info={vuln_summary.get('by_severity',{}).get('info',0)})"
     )
 
+    # Takeover table
+    takeover_table = Table(title="Subdomain Takeover Findings")
+    takeover_table.add_column("Subdomain", style="cyan")
+    takeover_table.add_column("Service", style="green")
+    takeover_table.add_column("CNAME Target", style="magenta")
+    takeover_table.add_column("Evidence", style="white")
+    if takeovers:
+        for t in takeovers:
+            takeover_table.add_row(
+                t.get("subdomain", "—"),
+                t.get("service", "—"),
+                t.get("cname_target", "—"),
+                t.get("evidence", "—")[:50],
+            )
+    else:
+        takeover_table.add_row("—", "—", "—", "—")
+    console.print(takeover_table)
+
+    console.print(
+        f"[bold blue]Takeover summary:[/bold blue] {takeover_summary.get('total', 0)} found "
+        f"({', '.join(f'{k}={v}' for k, v in takeover_summary.get('by_service', {}).items()) or 'none'})"
+    )
+
     # Technology stack table
     tech_table = Table(title="Technology Stack")
     tech_table.add_column("Technology", style="cyan")
@@ -330,6 +363,10 @@ def run_scan(
         f"{t.get('name','')} ({t.get('category','')}) — {t.get('description','')}"
         for t in tech_stack
     ]
+    takeover_report_lines = [
+        f"[{t.get('service','')}] {t.get('subdomain','')} -> {t.get('cname_target','')} (evidence: {t.get('evidence','')})"
+        for t in takeovers
+    ]
 
     generate_report(
         output_path=output_pdf,
@@ -339,6 +376,7 @@ def run_scan(
         discovered_paths=path_report_lines,
         subdomains=subdomain_report_lines,
         tech_stack=tech_report_lines,
+        takeovers=takeover_report_lines,
         possible_attacks=possible_attacks,
     )
 

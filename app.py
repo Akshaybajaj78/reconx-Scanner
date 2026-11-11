@@ -8,6 +8,7 @@ from modules.cors_checker import check_cors
 from modules.xss_tester import test_basic_xss
 from modules.vulnerability_scanner import scan_vulnerabilities
 from modules.tech_stack_detector import detect_tech_stack
+from modules.takeover_scanner import scan_takeovers
 from report_generator import generate_report
 import time
 from pathlib import Path
@@ -216,6 +217,26 @@ def api_scan():
             "xss_reflected": xss_reflected,
             "xss_test_url": test_url,
             "report": f"/reports/{report_name}",
+        }
+    )
+
+
+@app.post("/api/takeover")
+def api_takeover():
+    """Scan a list of subdomains for takeover vulnerabilities."""
+    payload = request.get_json(silent=True) or {}
+    subdomains = payload.get("subdomains", [])
+    if not subdomains or not isinstance(subdomains, list):
+        return jsonify({"error": "subdomains list is required"}), 400
+
+    timeout = float(payload.get("timeout", 5.0))
+    result = scan_takeovers(subdomains, timeout=timeout)
+
+    return jsonify(
+        {
+            "targets_scanned": result["targets_scanned"],
+            "takeovers": result["takeovers"],
+            "summary": result["summary"],
         }
     )
 

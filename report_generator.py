@@ -12,12 +12,15 @@ def generate_report(
     subdomains: list,
     possible_attacks: list,
     tech_stack: list = None,
+    takeovers: list = None,
 ):
     """
     Generate a professional PDF report.
     """
     if tech_stack is None:
         tech_stack = []
+    if takeovers is None:
+        takeovers = []
 
     doc = SimpleDocTemplate(output_path, pagesize=LETTER)
     styles = getSampleStyleSheet()
@@ -30,7 +33,7 @@ def generate_report(
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Summary", styles["Heading2"]))
-    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)} | Technologies: {len(tech_stack)}"
+    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)} | Technologies: {len(tech_stack)} | Takeovers: {len(takeovers)}"
     story.append(Paragraph(summary_text, styles["Normal"]))
     story.append(Spacer(1, 12))
 
@@ -48,6 +51,10 @@ def generate_report(
 
     story.append(Paragraph("Technology Stack", styles["Heading2"]))
     story.append(_list_table(tech_stack))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("Subdomain Takeovers", styles["Heading2"]))
+    story.append(_list_table(takeovers))
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Vulnerabilities", styles["Heading2"]))

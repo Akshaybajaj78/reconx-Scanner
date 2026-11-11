@@ -81,6 +81,8 @@ function App() {
   const [vulnFindings, setVulnFindings] = useState([]);
   const [techStack, setTechStack] = useState([]);
   const [techSummary, setTechSummary] = useState(null);
+  const [takeovers, setTakeovers] = useState([]);
+  const [takeoverSummary, setTakeoverSummary] = useState(null);
 
   function setAllMeta(meta) {
     setPortsMeta(meta);
@@ -116,6 +118,8 @@ function App() {
     setVulnFindings([]);
     setTechStack([]);
     setTechSummary(null);
+    setTakeovers([]);
+    setTakeoverSummary(null);
 
     try {
       const body = {
@@ -243,6 +247,15 @@ function App() {
       } else {
         setTechStack([]);
         setTechSummary(null);
+      }
+
+      // Takeovers — render rich takeover findings.
+      if (data.takeovers && Array.isArray(data.takeovers) && data.takeovers.length) {
+        setTakeovers(data.takeovers);
+        setTakeoverSummary(data.summary || null);
+      } else {
+        setTakeovers([]);
+        setTakeoverSummary(null);
       }
 
       if (data.report) {
@@ -507,6 +520,21 @@ function App() {
           </section>
         )}
 
+        {/* Takeover summary strip */}
+        {takeoverSummary && (
+          <section className="summary-strip">
+            <span className="summary-label">Takeovers</span>
+            <span className="summary-value">
+              {takeoverSummary.total} found
+            </span>
+            <span className="summary-type">
+              {Object.entries(takeoverSummary.by_service || {})
+                .map(([k, v]) => `${k}=${v}`)
+                .join(", ")}
+            </span>
+          </section>
+        )}
+
         {/* API documentation endpoints */}
         {apiDocs.length > 0 && (
           <section className="api-docs-section">
@@ -627,6 +655,31 @@ function App() {
                   <p className="tech-desc">{t.description}</p>
                 </li>
               )) : [<li key="tech-none">No technologies detected.</li>]}
+            </ul>
+          </article>
+
+          <article className="card card-red">
+            <header className="card-title">
+              <span className="card-icon">⚠️</span>
+              <h3>Subdomain Takeovers</h3>
+            </header>
+            <div className="card-meta" id="takeoversMeta">
+              {takeoverSummary ? `${takeoverSummary.total} takeover(s) found` : "To Be Scanned"}
+            </div>
+            <ul className="list" id="takeoversList">
+              {takeovers.length > 0 ? takeovers.map((t, idx) => (
+                <li key={`takeover-${idx}-${t.subdomain}`}>
+                  <strong>{t.subdomain}</strong>
+                  <span className="takeover-service">{t.service}</span>
+                  <span className="takeover-cname">→ {t.cname_target}</span>
+                  <p className="takeover-evidence">{t.evidence}</p>
+                  {t.claim_url && (
+                    <a href={t.claim_url} target="_blank" rel="noopener noreferrer" className="takeover-claim">
+                      Claim: {t.claim_url}
+                    </a>
+                  )}
+                </li>
+              )) : [<li key="takeover-none">No takeovers detected.</li>]}
             </ul>
           </article>
         </section>
