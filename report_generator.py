@@ -11,10 +11,14 @@ def generate_report(
     discovered_paths: list,
     subdomains: list,
     possible_attacks: list,
+    tech_stack: list = None,
 ):
     """
     Generate a professional PDF report.
     """
+    if tech_stack is None:
+        tech_stack = []
+
     doc = SimpleDocTemplate(output_path, pagesize=LETTER)
     styles = getSampleStyleSheet()
 
@@ -26,7 +30,7 @@ def generate_report(
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Summary", styles["Heading2"]))
-    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)}"
+    summary_text = f"Open Ports: {len(open_ports)} | Vulnerabilities: {len(vulnerabilities)} | Paths: {len(discovered_paths)} | Subdomains: {len(subdomains)} | Technologies: {len(tech_stack)}"
     story.append(Paragraph(summary_text, styles["Normal"]))
     story.append(Spacer(1, 12))
 
@@ -40,6 +44,10 @@ def generate_report(
 
     story.append(Paragraph("Discovered Paths", styles["Heading2"]))
     story.append(_list_table(discovered_paths))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("Technology Stack", styles["Heading2"]))
+    story.append(_list_table(tech_stack))
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Vulnerabilities", styles["Heading2"]))

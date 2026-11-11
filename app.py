@@ -1,11 +1,13 @@
 from flask import Flask, jsonify, request, send_from_directory
 from urllib.parse import urlparse, urlunparse
-from modules.port_scanner import scan_top_ports
+from modules.port_scanner import scan_ports, scan_top_ports
 from modules.subdomain_scanner import scan_subdomains
 from modules.directory_scanner import scan_directories
 from modules.header_checker import check_headers
 from modules.cors_checker import check_cors
 from modules.xss_tester import test_basic_xss
+from modules.vulnerability_scanner import scan_vulnerabilities
+from modules.tech_stack_detector import detect_tech_stack
 from report_generator import generate_report
 import time
 from pathlib import Path
@@ -55,45 +57,139 @@ def api_scan():
     base_url = urlunparse((scheme, f"{host}{port}", "", "", "", ""))
 
     # Core scan modules
-    open_ports = []
-    subdomains = []
     discovered_paths = []
     missing_headers = []
     cors_issues = []
     xss_reflected = False
     test_url = target
 
-    # Full scan for all targets (localhost and 127.0.0.1 included)
-    # Normalize localhost for port scanning reliability
+    # --- Advanced port scanning --------------------------------------- #
+    scan_type = (payload.get("scan_type") or "standard").strip()
+    custom_ports = payload.get("ports")  # str "22,80,443" or list[int]
+    enable_os = bool(payload.get("enable_os", False))
+    enable_scripts = bool(payload.get("enable_scripts", False))
+
     port_target = "127.0.0.1" if host in ("localhost", "127.0.0.1", "::1") else host
-    open_ports = scan_top_ports(port_target)
 
-    # Subdomains for localhost are not meaningful; skip them
-    subdomains = [] if host in ("localhost", "127.0.0.1", "::1") else scan_subdomains(base_url)
+    port_result = scan_ports(
+        port_target,
+        scan_type=scan_type,
+        ports=custom_ports,
+        timeout=60,
+        host_timeout="60s",
+        timing="T4",
+        enable_os=enable_os,
+        enable_scripts=enable_scripts,
+        grab_banners=True,
+    )
 
-    discovered_paths = scan_directories(base_url, "wordlist.txt")
-    missing_headers = check_headers(base_url)
+    open_ports = [f"{p['port']}/{p['protocol']}" for p in port_result["ports"]]
+    open_ports_detail = port_result["ports"]
+    os_matches = port_result["os"]
+
+    # --- Advanced subdomain scanning ---------------------------------- #
+    subdomain_use_ctsh = bool(payload.get("subdomain_use_ctsh", True))
+    subdomain_use_dns = bool(payload.get("subdomain_use_dns", True))
+    subdomain_probe_live = bool(payload.get("subdomain_probe_live", True))
+
+    subdomain_result = {}
+    if host not in ("localhost", "127.0.0.1", "::1"):
+        subdomain_result = scan_subdomains(
+            host,
+            timeout=20,
+            use_ctsh=subdomain_use_ctsh,
+            use_dns_brute=subdomain_use_dns,
+            dns_timeout=2.0,
+            http_timeout=4.0,
+            max_dns_workers=100,
+            max_http_workers=50,
+            probe_live=subdomain_probe_live,
+        )
+    subdomains = subdomain_result.get("subdomains", [])
+    subdomain_summary = subdomain_result.get("summary", {})
+
+    # --- Advanced directory / API endpoint scanning ------------------- #
+    path_use_api_docs = bool(payload.get("path_use_api_docs", True))
+    path_aggressive = bool(payload.get("path_aggressive", False))
+    path_methods_raw = payload.get("path_methods")  # e.g. "GET,HEAD,OPTIONS,POST"
+    path_methods = None
+    if path_methods_raw:
+        path_methods = [m.strip().upper() for m in str(path_methods_raw).split(",") if m.strip()]
+
+    path_result = scan_directories(
+        base_url,
+        wordlist_path="wordlist.txt",
+        timeout=8.0,
+        methods=path_methods,
+        max_workers=60,
+        aggressive=path_aggressive,
+        probe_api_docs=path_use_api_docs,
+    )
+
+    discovered_paths = path_result["paths"]
+    api_endpoints = path_result["api_endpoints"]
+    api_docs = path_result["api_docs"]
+    path_scan_summary = path_result["summary"]
+
+    # Build simple string list for legacy display
+    path_strings = [
+        f"{p['method']} {p['path']} ({p['status_code']}) {p.get('content_type','')}"
+        for p in discovered_paths
+    ]
+
+    # --- Comprehensive vulnerability scanning -------------------------- #
+    vuln_result = scan_vulnerabilities(
+        base_url,
+        timeout=8.0,
+    )
+
+    vulnerabilities = vuln_result["vulnerabilities"]
+    vuln_summary = vuln_result["summary"]
+
     cors_issues = check_cors(base_url)
+    missing_headers = check_headers(base_url)
     xss_reflected, test_url = test_basic_xss(base_url)
 
-    vulnerabilities = []
-    if missing_headers:
-        vulnerabilities.append("Missing Security Headers: " + ", ".join(missing_headers))
-    if cors_issues:
-        vulnerabilities.extend(cors_issues)
-    if xss_reflected:
-        vulnerabilities.append(f"Potential XSS reflection at {test_url}")
+    # --- Tech stack detection ------------------------------------------- #
+    tech_result = detect_tech_stack(base_url, timeout=8.0)
+    tech_stack = tech_result["technologies"]
+    tech_by_category = tech_result["by_category"]
+    tech_summary = tech_result["summary"]
+
+    # Build human-readable tech stack lines for the PDF report.
+    tech_report_lines = [
+        f"{t['name']} ({t['category']}) — {t['description']}"
+        for t in tech_stack
+    ]
 
     # Generate a fresh report on every scan
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     report_name = f"reconx_report_{timestamp}.pdf"
+    # Build human-readable detail lines for the PDF report.
+    port_detail_lines = [
+        f"{p['port']}/{p['protocol']} - {p['service']} {p['product']} {p['version']} {p['extrainfo']}".strip()
+        for p in open_ports_detail
+    ]
+    subdomain_report_lines = [
+        f"{s['subdomain']} ({s.get('ip','')}) [{s.get('method','')}] status={s.get('status_code','-')} title={s.get('title','')}"
+        for s in subdomains
+    ]
+    path_report_lines = [
+        f"{p['method']} {p['path']} ({p['status_code']}) {p.get('content_type','')} {'[API]' if p['is_api'] else ''}{'[DOC]' if p['is_api_doc'] else ''}"
+        for p in discovered_paths
+    ]
+    vuln_report_lines = [
+        f"[{v.get('severity','info').upper()}] {v.get('title','')} — {v.get('description','')} [{v.get('category','General')}]"
+        for v in vulnerabilities
+    ]
     generate_report(
         output_path=report_name,
         target=target,
-        open_ports=open_ports,
-        vulnerabilities=vulnerabilities,
-        discovered_paths=discovered_paths,
-        subdomains=subdomains,
+        open_ports=port_detail_lines,
+        vulnerabilities=vuln_report_lines,
+        discovered_paths=path_report_lines,
+        subdomains=subdomain_report_lines,
+        tech_stack=tech_report_lines,
         possible_attacks=[],
     )
 
@@ -101,9 +197,24 @@ def api_scan():
         {
             "target": target,
             "open_ports": open_ports,
+            "open_ports_detail": open_ports_detail,
+            "os_matches": os_matches,
+            "port_scan_summary": port_result["summary"],
             "subdomains": subdomains,
+            "subdomain_summary": subdomain_summary,
             "discovered_paths": discovered_paths,
+            "api_endpoints": api_endpoints,
+            "api_docs": api_docs,
+            "path_scan_summary": path_scan_summary,
             "vulnerabilities": vulnerabilities,
+            "vuln_summary": vuln_summary,
+            "tech_stack": tech_stack,
+            "tech_by_category": tech_by_category,
+            "tech_summary": tech_summary,
+            "cors_issues": cors_issues,
+            "missing_headers": missing_headers,
+            "xss_reflected": xss_reflected,
+            "xss_test_url": test_url,
             "report": f"/reports/{report_name}",
         }
     )

@@ -640,4 +640,82 @@ select {
   .scan-input {
     font-size: 15px;
   }
+
+  .methods-input {
+    max-width: 140px;
+    width: 140px;
+    font-size: 13px;
+    padding: 8px 10px;
+    font-family: "Space Mono", monospace;
+  }
+
+  .api-docs-section {
+    background: rgba(6, 16, 12, 0.7);
+    border: 1px solid rgba(120, 255, 210, 0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 10px;
+  }
+
+  .api-docs-section h4 {
+    margin: 0 0 10px;
+    color: var(--blue);
+    font-family: "Rajdhani", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 14px;
+  }
+
+  .vuln-high { color: #ff4d4d; font-weight: 700; }
+  .vuln-medium { color: #ff9a3c; font-weight: 600; }
+  .vuln-low { color: #ffd166; font-weight: 600; }
+  .vuln-info { color: #3aa4ff; font-weight: 600; }
+
+  .card-purple {
+    border-color: rgba(180, 120, 255, 0.35);
+  }
+
+  .card-purple .card-icon,
+  .card-purple .list li::before {
+    color: #b078ff;
+  }
+
+  .tech-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tech-web_server { background: rgba(58, 164, 255, 0.2); color: #3aa4ff; border: 1px solid rgba(58, 164, 255, 0.4); }
+  .tech-cms { background: rgba(72, 209, 123, 0.2); color: #48d17b; border: 1px solid rgba(72, 209, 123, 0.4); }
+  .tech-language { background: rgba(255, 154, 60, 0.2); color: #ff9a3c; border: 1px solid rgba(255, 154, 60, 0.4); }
+  .tech-framework { background: rgba(180, 120, 255, 0.2); color: #b078ff; border: 1px solid rgba(180, 120, 255, 0.4); }
+  .tech-javascript_library { background: rgba(120, 255, 210, 0.2); color: #78ffd2; border: 1px solid rgba(120, 255, 210, 0.4); }
+  .tech-analytics { background: rgba(255, 209, 102, 0.2); color: #ffd166; border: 1px solid rgba(255, 209, 102, 0.4); }
+  .tech-cdn { background: rgba(255, 88, 88, 0.2); color: #ff5858; border: 1px solid rgba(255, 88, 88, 0.4); }
+  .tech-security { background: rgba(120, 255, 210, 0.2); color: #78ffd2; border: 1px solid rgba(120, 255, 210, 0.4); }
+  .tech-other { background: rgba(142, 164, 201, 0.2); color: #8ea4c9; border: 1px solid rgba(142, 164, 201, 0.4); }
+
+  .tech-confidence {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  .tech-desc {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .tech-high { color: #ff4d4d; font-weight: 700; }
+  .tech-medium { color: #ff9a3c; font-weight: 600; }
+  .tech-low { color: #8ea4c9; font-weight: 600; }
 }
