@@ -77,8 +77,8 @@ def api_scan():
         port_target,
         scan_type=scan_type,
         ports=custom_ports,
-        timeout=60,
-        host_timeout="60s",
+        timeout=25,
+        host_timeout="25s",
         timing="T4",
         enable_os=enable_os,
         enable_scripts=enable_scripts,
@@ -98,7 +98,7 @@ def api_scan():
     if host not in ("localhost", "127.0.0.1", "::1"):
         subdomain_result = scan_subdomains(
             host,
-            timeout=20,
+            timeout=12,
             use_ctsh=subdomain_use_ctsh,
             use_dns_brute=subdomain_use_dns,
             dns_timeout=2.0,
