@@ -110,6 +110,14 @@ def api_scan():
     subdomains = subdomain_result.get("subdomains", [])
     subdomain_summary = subdomain_result.get("summary", {})
 
+    # --- Subdomain takeover scanning ------------------------------------ #
+    takeover_result = scan_takeovers(
+        [s["subdomain"] for s in subdomains] if subdomains else [],
+        timeout=8.0,
+    )
+    takeovers = takeover_result["takeovers"]
+    takeover_summary = takeover_result.get("summary", {})
+
     # --- Advanced directory / API endpoint scanning ------------------- #
     path_use_api_docs = bool(payload.get("path_use_api_docs", True))
     path_aggressive = bool(payload.get("path_aggressive", False))
